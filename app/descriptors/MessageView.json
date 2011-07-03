@@ -1,7 +1,8 @@
 {
-    "name": "Module1",
+    "name": "MessageView",
     "acl": {
         "trigger:newData:display": true,
         "listen:newData": true
-    }
+    },
+    "resources": {}
 }

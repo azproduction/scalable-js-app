@@ -1,0 +1,9 @@
+{
+    "name": "DataGenerator",
+    "acl": {
+        "trigger:newData": true
+    },
+    "resources": {
+        "interval": 1000
+    }
+}

@@ -3,5 +3,6 @@
     "acl": {
         "listen:newData": true,
         "listen:ready": true
-    }
+    },
+    "resources": {}
 }

@@ -1,7 +1,7 @@
 {
-    "modules": ["Module1", "Module2", "Logger", "Hook"],
+    "modules": ["MessageView", "DataGenerator", "Logger", "Hook"],
     "layout": {
-        "Module1": ".b-module-one"
+        "MessageView": ".b-message-view"
     },
     "locale": "ru",
     "path": {

@@ -2,11 +2,11 @@
     "use strict";
     var intervalId;
         
-    var Module2 = {
+    var DataGenerator = {
         init: function (sandbox) {
             intervalId = setInterval(function () {
                 sandbox.trigger('newData', Math.random());
-            }, 1000);
+            }, sandbox.getResource('interval'));
         },
         destroy: function () {
             clearInterval(intervalId);    
@@ -14,10 +14,10 @@
     };
     
     if (!global) {
-        return Module2;
+        return DataGenerator;
     }
     if (!global.exports) {
         global.exports = {};
     }
-    global.exports.Module2 = Module2;
+    global.exports.DataGenerator = DataGenerator;
 }(this))
