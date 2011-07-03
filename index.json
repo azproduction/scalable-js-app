@@ -1,0 +1,12 @@
+{
+    "modules": ["Module1", "Module2", "Logger", "Hook"],
+    "layout": {
+        "Module1": ".b-module-one"
+    },
+    "locale": "ru",
+    "path": {
+        "descriptor": "./app/descriptors/",
+        "module": "./app/modules/",
+        "locale": "./app/locales/"
+    }
+}

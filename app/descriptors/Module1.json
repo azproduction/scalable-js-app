@@ -1,0 +1,7 @@
+{
+    "name": "Module1",
+    "acl": {
+        "trigger:newData:display": true,
+        "listen:newData": true
+    }
+}

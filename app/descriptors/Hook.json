@@ -1,0 +1,6 @@
+{
+    "name": "Hook",
+    "acl": {
+        "hook:newData": true
+    }
+}

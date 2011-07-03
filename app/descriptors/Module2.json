@@ -1,0 +1,6 @@
+{
+    "name": "Module2",
+    "acl": {
+        "trigger:newData": true
+    }
+}
