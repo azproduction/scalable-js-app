@@ -1,0 +1,7 @@
+/*$buildFrom: ../../index.json */
+
+/* app/css/blocks/b-message-view/b-message-view.css */
+.b-message-view {
+    color: green;
+    font-family: monospace;
+}

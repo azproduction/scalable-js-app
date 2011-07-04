@@ -7,6 +7,7 @@
     "path": {
         "descriptor": "./app/descriptors/",
         "module": "./app/modules/",
-        "locale": "./app/locales/"
+        "locale": "./app/locales/",
+        "template": "./app/templates/"
     }
 }
