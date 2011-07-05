@@ -2,29 +2,6 @@
 (function (Core, $, TestData, ok, test, module, equals, expect, asyncTest, start, stop) {
 "use strict";
 
-var MessageViewDescriptor =
-{
-    "name": "MessageView",
-    "acl": {
-        "trigger:newData:display": true,
-        "listen:newData": true
-    },
-    "resources": {}
-};
-
-var MessageViewLocale =
-{
-    "text_label": {
-        "ru": "Он сказал: ",
-        "en": "He said: "
-    }
-};
-
-var MessageViewTemplate =
-'<div class="b-message-view">' +
-    '<span class="b-message-view__label">{%=label%}</span><span class="b-message-view__value">{%=value%}</span>' +
-'</div>';
-
 var ApplicationEnvironment =
 {
     "modules": ["MessageView"],
@@ -40,18 +17,14 @@ var ApplicationEnvironment =
     }
 };
 
-Core.pushDescriptor("MessageView", MessageViewDescriptor);
-Core.pushTemplate("MessageView", MessageViewTemplate);
-Core.pushLocale("MessageView", MessageViewLocale);
-
 Core.on('ready', function () {
     module("MessageView");
 
     test("listen:newData", function() {
         var testItems = TestData["newData"](),
-            $MessageView = $(ApplicationEnvironment.layout.MessageView),
+            $MessageView = Core.getBox("MessageView"),
             template = Core.getTemplateFunction("MessageView", '.b-message-view'),
-            label = MessageViewLocale.text_label[ApplicationEnvironment.locale];
+            label = Core.getText("MessageView", "text_label");
 
         expect(testItems.length);
 
@@ -62,14 +35,13 @@ Core.on('ready', function () {
 
             // >>> put your code
             var expected = template({label: label, value: text});
-            console.log(expected);
             equals(expected, $MessageView.html(), 'Should be "text_label: value"');
         });
     });
 
     test("trigger:newData:display", function() {
         var testItems = TestData["newData"](),
-            $MessageView = $(ApplicationEnvironment.layout.MessageView),
+            $MessageView = Core.getBox("MessageView"),
             template = Core.getTemplateFunction("MessageView", '.b-message-view');
 
         expect(testItems.length);
