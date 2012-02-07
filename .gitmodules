@@ -1,0 +1,3 @@
+[submodule "vendors/lmd"]
+	path = vendors/lmd
+	url = git@github.com:azproduction/lmd.git
