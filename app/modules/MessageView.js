@@ -1,4 +1,4 @@
-function MessageView(require, exports, module) {
+function MessageView(sandboxed, exports, module) {
     "use strict";
     var messageViewInstance;
 

@@ -1,4 +1,4 @@
-(function (window) {
+(function (window, sandboxed_modules) {
     var modules = {},
         initialized_modules = {},
         require = function (moduleName) {
@@ -25,7 +25,7 @@
                 module = window[moduleName];
             } else if (typeof module === "function") {
                 // Ex-Lazy LMD module or unpacked module ("pack": false)
-                module = module(require, output.exports, output) || output.exports;
+                module = module(sandboxed_modules[moduleName] ? null : require, output.exports, output) || output.exports;
             }
 
             return modules[moduleName] = module;
@@ -47,7 +47,7 @@
             return lmd;
         };
     return lmd;
-}(window))({
+})(window,{"MessageView":true,"DataGenerator":true,"Logger":true,"Hook":true})({
 "Core": function Core(require, exports) {
     "use strict";
 

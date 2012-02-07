@@ -1,4 +1,4 @@
-function DataGenerator(require, exports, module) {
+function DataGenerator(sandboxed, exports, module) {
     "use strict";
     var intervalId;
         

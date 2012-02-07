@@ -16,7 +16,7 @@ Slides(ru): http://www.slideshare.net/azproduction/making-scalable-javascript-ap
 Depends
 -------
 
-Scalable js app depend on LMD(https://github.com/azproduction/lmd) `npm install lmd -g` - required for build
+Scalable js app depend on LMD v1.3.0+ (https://github.com/azproduction/lmd) `npm install lmd -g` - required for build
 
 Build and run the example
 -------------------------
@@ -38,6 +38,7 @@ Changelog
  - ModuleManager, loader and $script.js are wiped
  - Part of ModuleManager logic is moved to Core
  - All modules are loaded on startup (using lmd) so we no longer need a heavy loaders and $script.js
+ - All application modules (not lib modules) are totally sandboxed (cant require at all)
 
 Licence
 -------

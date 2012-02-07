@@ -53,10 +53,22 @@ var collectModules = function () {
     return modules;
 };
 
+var collectSandboxedModules = function () {
+    var modules = {};
+
+    appConfig.modules.forEach(function (moduleName) {
+        modules[moduleName] = true;
+    });
+
+    return modules;
+};
+
 var lmd_config = {
     "path": "/",
+    "global": "window", // define to be sure
     "main": "main",
     "modules": collectModules(),
+    "sandbox": collectSandboxedModules(),
     "lazy": IS_PRODUCTION,
     "pack": IS_PRODUCTION
 };

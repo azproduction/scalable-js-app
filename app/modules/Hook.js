@@ -1,4 +1,4 @@
-function Hook(require, exports, module) {
+function Hook(sandboxed, exports, module) {
     "use strict";
     var sb;
 

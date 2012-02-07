@@ -1,4 +1,4 @@
-function Logger(require, exports, module) {
+function Logger(sandboxed, exports, module) {
     "use strict";
     var printLog = function (event, data) {
         console.log(event.type, data);
