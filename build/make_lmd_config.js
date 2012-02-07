@@ -15,8 +15,13 @@ var collect = function (what, is_json) {
     var items = {};
 
     appConfig.modules.forEach(function (moduleName) {
-        var item = fs.readFileSync(BASE_DIR + appConfig.path[what] + moduleName + (is_json ? '.json' : '.html'), 'utf8');
-        items[moduleName] = is_json ? JSON.parse(item) : item;
+        var file = BASE_DIR + appConfig.path[what] + moduleName + (is_json ? '.json' : '.html');
+        try {
+            var item = fs.readFileSync(file, 'utf8');
+            items[moduleName] = is_json ? JSON.parse(item) : item;
+        } catch (e) {
+            // ignore if not found
+        }
     });
 
     return JSON.stringify(items);
@@ -24,24 +29,32 @@ var collect = function (what, is_json) {
 
 var collectModules = function () {
     fs.writeFileSync(TMP_DIR + 'locales.json', collect('locale', true), 'utf8');
-    fs.writeFileSync(TMP_DIR + 'templates.json', collect('template', true), 'utf8');
+    fs.writeFileSync(TMP_DIR + 'templates.json', collect('template', false), 'utf8');
     fs.writeFileSync(TMP_DIR + 'descriptors.json', collect('descriptor', true), 'utf8');
 
     var modules = {
-        "main": "index.js",
-        "locales": TMP_DIR + 'locales.json', // ll be updated
-        "templates": TMP_DIR + 'templates.json', // ll be updated,
-        "descriptors": TMP_DIR + 'descriptors.json'
+        "main": fs.realpathSync(BASE_DIR + "index.js"),
+
+        "Core": fs.realpathSync(BASE_DIR + "lib/Core.js"),
+        "Template": fs.realpathSync(BASE_DIR + "lib/Template.js"),
+        "EventManager": fs.realpathSync(BASE_DIR + "lib/EventManager.js"),
+        "Sandbox": fs.realpathSync(BASE_DIR + "lib/Sandbox.js"),
+
+        "locales": fs.realpathSync(TMP_DIR + 'locales.json'),
+        "templates": fs.realpathSync(TMP_DIR + 'templates.json'),
+        "descriptors": fs.realpathSync(TMP_DIR + 'descriptors.json'),
+        "descriptor": fs.realpathSync(BASE_DIR + "index.json")
     };
 
     appConfig.modules.forEach(function (moduleName) {
-        modules[moduleName] = BASE_DIR + appConfig.path.module + moduleName + '.js';
+        modules[moduleName] = fs.realpathSync(BASE_DIR + appConfig.path.module + moduleName + '.js');
     });
 
     return modules;
 };
 
 var lmd_config = {
+    "path": "/",
     "main": "main",
     "modules": collectModules(),
     "lazy": IS_PRODUCTION,

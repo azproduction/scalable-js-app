@@ -1,8 +1,8 @@
-(function(global){
+function Hook(require, exports, module) {
     "use strict";
     var sb;
 
-    var Hook = {
+    return {
         init: function (sandbox) {
             sb = sandbox;
             sandbox.hook('newData', function (data) {
@@ -19,12 +19,4 @@
             sb.unhook('newData');    
         }
     };
-    
-    if (!global) {
-        return Hook;
-    }
-    if (!global.exports) {
-        global.exports = {};
-    }
-    global.exports.Hook = Hook;
-}(this))
+}

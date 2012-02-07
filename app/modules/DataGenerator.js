@@ -1,8 +1,8 @@
-(function(global){
+function DataGenerator(require, exports, module) {
     "use strict";
     var intervalId;
         
-    var DataGenerator = {
+    return {
         init: function (sandbox) {
             intervalId = setInterval(function () {
                 sandbox.trigger('newData', Math.random());
@@ -12,12 +12,4 @@
             clearInterval(intervalId);    
         }
     };
-    
-    if (!global) {
-        return DataGenerator;
-    }
-    if (!global.exports) {
-        global.exports = {};
-    }
-    global.exports.DataGenerator = DataGenerator;
-}(this))
+}

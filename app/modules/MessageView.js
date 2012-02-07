@@ -1,4 +1,4 @@
-(function(global){
+function MessageView(require, exports, module) {
     "use strict";
     var messageViewInstance;
 
@@ -23,7 +23,7 @@
         this.sandbox.trigger('newData:display');
     };
 
-    var MessageViewPublic = {
+    return {
         init: function (sandbox) {
             messageViewInstance = new MessageView(sandbox);
         },
@@ -31,12 +31,4 @@
             messageViewInstance = null;
         }
     };
-    
-    if (!global) {
-        return MessageViewPublic;
-    }
-    if (!global.exports) {
-        global.exports = {};
-    }
-    global.exports.MessageView = MessageViewPublic;
-}(this))
+}
