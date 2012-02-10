@@ -1,3 +1,59 @@
+/**
+ * @description
+ *
+ *      This file generates config for LMD builder @see https://github.com/azproduction/lmd
+ *      This file in depend on tmp/ dir created by Makefile and on ../index.json
+ *
+ * @usage
+ *
+ *      node ./make_lmd_config.js -v %ENVIRONMENT%;
+ *      node ./make_lmd_config.js -v "production";
+ *
+ * @output
+ *
+ *      FILE: tmp/lmd.%ENVIRONMENT%.json
+ *
+ *      FILE CONTENT:
+ *      {
+ *          "path":"/",
+ *          "global":"window",
+ *          "main":"main",
+ *          "modules":{
+ *              // index.js file
+ *              "main":"/absolute/path/to/index.js",
+ *
+ *              // Core modules
+ *              "Core":"/absolute/path/to/lib/Core.js",
+ *              "Template":"/absolute/path/to/lib/Template.js",
+ *              "EventManager":"/absolute/path/to/lib/EventManager.js",
+ *              "Sandbox":"/absolute/path/to/lib/Sandbox.js",
+ *
+ *              // "packed" modules resources. Each file contents: {"ModuleName": "resourceValue", ...}
+ *              "locales":"/absolute/path/to/build/tmp/locales.json",
+ *              "templates":"/absolute/path/to/build/tmp/templates.json",
+ *              "descriptors":"/absolute/path/to/build/tmp/descriptors.json",
+ *
+ *               // application descriptor
+ *              "descriptor":"/absolute/path/to/index.json",
+ *
+ *              // list of all app modules declared in "descriptor"
+ *              "MessageView":"/absolute/path/to/app/modules/MessageView.js",
+ *              "DataGenerator":"/absolute/path/to/app/modules/DataGenerator.js",
+ *              "Logger":"/absolute/path/to/app/modules/Logger.js",
+ *              "Hook":"/absolute/path/to/app/modules/Hook.js"
+ *              // other modules...
+ *          },"
+ *          sandbox":{
+ *              "MessageView":true,
+ *              "DataGenerator":true,
+ *              "Logger":true,
+ *              "Hook":true
+ *          },
+ *          "lazy":true, // value depend on -v
+ *          "pack":true  // value depend on -v
+ *      }
+ */
+
 var APP_CONFIG = __dirname + '/../index.json',
     BASE_DIR = __dirname + '/../',
     TMP_DIR = __dirname + '/tmp/';
