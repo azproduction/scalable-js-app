@@ -506,7 +506,7 @@
         "template": "./app/templates/"
     }
 },
-"MessageView": function MessageView(require, exports, module) {
+"MessageView": function MessageView(sandboxed, exports, module) {
     "use strict";
     var messageViewInstance;
 
@@ -540,7 +540,7 @@
         }
     };
 },
-"DataGenerator": function DataGenerator(require, exports, module) {
+"DataGenerator": function DataGenerator(sandboxed, exports, module) {
     "use strict";
     var intervalId;
         
@@ -555,7 +555,7 @@
         }
     };
 },
-"Logger": function Logger(require, exports, module) {
+"Logger": function Logger(sandboxed, exports, module) {
     "use strict";
     var printLog = function (event, data) {
         console.log(event.type, data);
@@ -569,7 +569,7 @@
         destroy: function () {}
     };
 },
-"Hook": function Hook(require, exports, module) {
+"Hook": function Hook(sandboxed, exports, module) {
     "use strict";
     var sb;
 
