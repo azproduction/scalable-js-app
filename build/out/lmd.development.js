@@ -56,6 +56,12 @@
         Sandbox = require('Sandbox'),
         EventManager = require('EventManager');
 
+    var bind = function (func, context) {
+        return function () {
+            return func.apply(context, arguments);
+        };
+    };
+
     /**
      * @namespace
      */
@@ -201,17 +207,17 @@
      * Global Core object
      */
     var coreExports = {
-        trigger:       $.proxy(EventManager.trigger, EventManager),
-        bind:          $.proxy(EventManager.bind, EventManager),
-        unbind:        $.proxy(EventManager.unbind, EventManager),
-        on:            $.proxy(EventManager.bind, EventManager),
+        trigger:       bind(EventManager.trigger, EventManager),
+        bind:          bind(EventManager.bind, EventManager),
+        unbind:        bind(EventManager.unbind, EventManager),
+        on:            bind(EventManager.bind, EventManager),
 
-        init:          $.proxy(Core.init, Core),
-        destroyModule: $.proxy(Core.destroyModule, Core),
-        initModule:    $.proxy(Core.initModule, Core),
-        getTemplate:   $.proxy(Core.getTemplate, Core),
-        getText:       $.proxy(Core.getText, Core),
-        getBox:        $.proxy(Core.getBox, Core)
+        init:          bind(Core.init, Core),
+        destroyModule: bind(Core.destroyModule, Core),
+        initModule:    bind(Core.initModule, Core),
+        getTemplate:   bind(Core.getTemplate, Core),
+        getText:       bind(Core.getText, Core),
+        getBox:        bind(Core.getBox, Core)
     };
 
     // exports

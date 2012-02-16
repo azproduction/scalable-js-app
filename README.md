@@ -16,7 +16,8 @@ Slides(ru): http://www.slideshare.net/azproduction/making-scalable-javascript-ap
 Depends
 -------
 
-Scalable js app depend on LMD v1.3.0+ (https://github.com/azproduction/lmd) `npm install lmd -g` - required for build
+ - LMD v1.3.0+ (https://github.com/azproduction/lmd) `npm install lmd -g` - required for build
+ - jQuery or Zepto.js - required for core modules (see index.html)
 
 Build and run the example
 -------------------------
