@@ -39,6 +39,7 @@ Changelog
  - Part of ModuleManager logic is moved to Core
  - All modules are loaded on startup (using lmd) so we no longer need a heavy loaders and $script.js
  - All application modules (not lib modules) are totally sandboxed (cant require at all)
+ - Simple acl wildcards support `listen:*` and `*` but not `listen:ololo:*`
 
 Licence
 -------

@@ -234,7 +234,7 @@
         "var p=[],print=function(){p.push.apply(p,arguments);};" +
 
         // Introduce the data as local variables using with(){}
-        "with(obj){p.push('" +
+        "with(obj||{}){p.push('" +
 
         // Convert the template into pure JavaScript
         String(str)
@@ -364,13 +364,21 @@
      *
      * @returns {Boolean}
      */
-    Sandbox.prototype.is = function (role) {
-        if (arguments.length === 1 && this.descriptor.acl[role]) {
+    Sandbox.prototype.is = function () {
+        var acl = this.descriptor.acl;
+
+        if (acl['*']) {
             return true;
         }
-        return Array.prototype.slice(arguments).every($.proxy(function (item) {
-            return this.descriptor.acl[item];
-        }, this));
+
+        for (var i = 0, c = arguments.length, role; i < c; i++) {
+            role = arguments[i];
+            if (!(acl[role] || acl[role.split(':')[0] + ':*'])) {
+                return false;
+            }
+        }
+
+        return true;
     };
 
     /**
@@ -492,7 +500,7 @@
 },
 "locales": {"MessageView":{"text_label":{"ru":"Он сказал: ","en":"He said: "}},"DataGenerator":{},"Logger":{},"Hook":{}},
 "templates": {"MessageView":"<div class=\"b-message-view\">\r\n    <span class=\"b-message-view__label\">{%=label%}</span><span class=\"b-message-view__value\">{%=value%}</span>\r\n</div>"},
-"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}},"Hook":{"name":"Hook","acl":{"hook:newData":true},"resources":{}}},
+"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}},"Hook":{"name":"Hook","acl":{"hook:*":true},"resources":{}}},
 "descriptor": {
     "modules": ["MessageView", "DataGenerator", "Logger", "Hook"],
     "layout": {
