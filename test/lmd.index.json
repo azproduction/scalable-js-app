@@ -1,0 +1,15 @@
+{
+    "path": "./units/",
+    "modules": {
+        "main": "main.js",
+        "*Test": "*Test.js",
+        "Core": "../../lib/Core.js",
+        "Sandbox": "../../lib/Sandbox.js",
+        "Template": "../../lib/Template.js",
+        "EventManager": "../../lib/EventManager.js"
+    },
+    "main": "main",
+    "lazy": false,
+    "pack": false,
+    "global": "window"
+}

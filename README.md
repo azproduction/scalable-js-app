@@ -27,6 +27,12 @@ Build and run the example
 
 **Build makes only js files**
 
+Running tests
+-------------
+
+1. `cd test && make`
+2. open `test/index.html`
+
 Changelog
 ---------
 
