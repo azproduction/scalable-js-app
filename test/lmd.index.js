@@ -73,7 +73,7 @@
     module('EventManager');
 
     test("EventManager test", function() {
-        expect(4);
+        expect(2);
 
         var data = {data: 'data'};
         var namespace = 'mytestnamespace';
@@ -84,18 +84,6 @@
 
         var listenterThatShouldndFire = function () {
             ok(false, "event shouldnt fire");
-        };
-
-        var hook = function (data) {
-            // can prevent event
-            if (data === false) {
-                return false;
-            }
-
-            // can patch data object
-            if (typeof data === "object") {
-                data.item = 100;
-            }
         };
 
         // EventManager.bind
@@ -113,33 +101,6 @@
         EventManager.unbind('event2.' + namespace);
         EventManager.unbind('event2', listenterThatShouldndFire);
         EventManager.trigger('event2'); // 0
-
-
-        // EventManager.hook
-        EventManager.hook('event1', hook);
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(false, 'hook should prevent event');
-        });
-        EventManager.trigger('event1', false); // 0
-        EventManager.unbind('event1.' + namespace);
-
-
-        // EventManager.hook
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(data.item === 100, 'hook can patch data');
-        });
-        EventManager.trigger('event1', {}); // +1
-        EventManager.unbind('event1.' + namespace);
-
-
-        // EventManager.unhook
-        EventManager.unhook('event1', hook);
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(typeof data.item === "undefined", 'should unhook');
-        });
-        EventManager.trigger('event1', {}); // +1
-        EventManager.unbind('event1.' + namespace);
-
 
         // EventManager.unbind
         EventManager.unbind('event1', listenterThatShouldFire);
@@ -586,11 +547,6 @@
         */
         $: $('<div/>'),
         /**
-        * hooks list
-        * @tyoe Object
-        */
-        hooks: {},
-        /**
         * Hooked version of jQuery#trigger
         *
         * @param {String} event
@@ -599,16 +555,6 @@
         * @returns {EventManager}
         */
         trigger: function (event, data) {
-            if (this.hooks[event]) {
-                // Update event data
-                var result = this.hooks[event](data);
-                // Don't trigger event
-                if (result === false) {
-                    return this;
-                }
-                // Trigger with new data
-                data = result || data;
-            }
             this.$.trigger.apply(this.$, [event, data]);
             return this;
         },
@@ -632,29 +578,6 @@
         */
         unbind: function () {
             this.$.unbind.apply(this.$, arguments);
-            return this;
-        },
-        /**
-        * Adds hook to specific event
-        *
-        * @param {String}   event
-        *
-        * @returns {EventManager}
-        */
-        hook: function (event, hookFunction) {
-            // One hook for example
-            this.hooks[event] = hookFunction;
-            return this;
-        },
-        /**
-        * Removes hook from specific event
-        *
-        * @param {String}   event
-        *
-        * @returns {EventManager}
-        */
-        unhook: function (event) {
-            delete this.hooks[event];
             return this;
         }
     };

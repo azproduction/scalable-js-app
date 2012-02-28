@@ -1,5 +1,5 @@
 {
-    "modules": ["MessageView", "DataGenerator", "Logger", "Hook"],
+    "modules": ["MessageView", "DataGenerator", "Logger"],
     "layout": {
         "MessageView": ".b-message-view"
     },

@@ -1,7 +1,0 @@
-{
-    "name": "Hook",
-    "acl": {
-        "hook:*": true
-    },
-    "resources": {}
-}

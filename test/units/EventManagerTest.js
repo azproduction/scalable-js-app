@@ -10,7 +10,7 @@ function EventManagerTest (require) {
     module('EventManager');
 
     test("EventManager test", function() {
-        expect(4);
+        expect(2);
 
         var data = {data: 'data'};
         var namespace = 'mytestnamespace';
@@ -21,18 +21,6 @@ function EventManagerTest (require) {
 
         var listenterThatShouldndFire = function () {
             ok(false, "event shouldnt fire");
-        };
-
-        var hook = function (data) {
-            // can prevent event
-            if (data === false) {
-                return false;
-            }
-
-            // can patch data object
-            if (typeof data === "object") {
-                data.item = 100;
-            }
         };
 
         // EventManager.bind
@@ -50,33 +38,6 @@ function EventManagerTest (require) {
         EventManager.unbind('event2.' + namespace);
         EventManager.unbind('event2', listenterThatShouldndFire);
         EventManager.trigger('event2'); // 0
-
-
-        // EventManager.hook
-        EventManager.hook('event1', hook);
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(false, 'hook should prevent event');
-        });
-        EventManager.trigger('event1', false); // 0
-        EventManager.unbind('event1.' + namespace);
-
-
-        // EventManager.hook
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(data.item === 100, 'hook can patch data');
-        });
-        EventManager.trigger('event1', {}); // +1
-        EventManager.unbind('event1.' + namespace);
-
-
-        // EventManager.unhook
-        EventManager.unhook('event1', hook);
-        EventManager.bind('event1.' + namespace, function (event, data) {
-            ok(typeof data.item === "undefined", 'should unhook');
-        });
-        EventManager.trigger('event1', {}); // +1
-        EventManager.unbind('event1.' + namespace);
-
 
         // EventManager.unbind
         EventManager.unbind('event1', listenterThatShouldFire);

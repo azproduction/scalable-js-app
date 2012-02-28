@@ -47,7 +47,7 @@
             return lmd;
         };
     return lmd;
-})(window,{"MessageView":true,"DataGenerator":true,"Logger":true,"Hook":true})({
+})(window,{"MessageView":true,"DataGenerator":true,"Logger":true})({
 "Core": function Core(require, exports) {
     "use strict";
 
@@ -102,15 +102,22 @@
         /**
          * Starts app
          *
+         * @params {Object} [data]
+         *
          * @returns Core
          */
-        init: function () {
-            this.descriptor = require('descriptor');
-            this.descriptors = require('descriptors');
-            this.templates = require('templates');
-            this.locales = require('locales');
+        init: function (data) {
+            data = data || {};
+            this.descriptor = data.descriptor || require('descriptor');
+            this.descriptor.modules = this.descriptor.modules || [];
+            this.descriptor.layout = this.descriptor.layout || {};
+            this.descriptors = data.descriptors || require('descriptors');
+            this.templates = data.templates || require('templates');
+            this.locales = data.locales || require('locales');
 
             this._initModules();
+
+            return this;
         },
 
         /**
@@ -269,11 +276,6 @@
         */
         $: $('<div/>'),
         /**
-        * hooks list
-        * @tyoe Object
-        */
-        hooks: {},
-        /**
         * Hooked version of jQuery#trigger
         *
         * @param {String} event
@@ -282,16 +284,6 @@
         * @returns {EventManager}
         */
         trigger: function (event, data) {
-            if (this.hooks[event]) {
-                // Update event data
-                var result = this.hooks[event](data);
-                // Don't trigger event
-                if (result === false) {
-                    return this;
-                }
-                // Trigger with new data
-                data = result || data;
-            }
             this.$.trigger.apply(this.$, [event, data]);
             return this;
         },
@@ -315,29 +307,6 @@
         */
         unbind: function () {
             this.$.unbind.apply(this.$, arguments);
-            return this;
-        },
-        /**
-        * Adds hook to specific event
-        *
-        * @param {String}   event
-        *
-        * @returns {EventManager}
-        */
-        hook: function (event, hookFunction) {
-            // One hook for example
-            this.hooks[event] = hookFunction;
-            return this;
-        },
-        /**
-        * Removes hook from specific event
-        *
-        * @param {String}   event
-        *
-        * @returns {EventManager}
-        */
-        unhook: function (event) {
-            delete this.hooks[event];
             return this;
         }
     };
@@ -431,38 +400,7 @@
      */
     Sandbox.prototype.trigger = function (event, data) {
         if (this.is('trigger:' + event)) {
-            EventManager.trigger(event, data || {});
-        }
-
-        return this;
-    };
-
-    /**
-     * Hooks specific event
-     *
-     * @param {String}   event
-     * @param {Function} hookFunction
-     *
-     * @returns {Sandbox}
-     */
-    Sandbox.prototype.hook = function (event, hookFunction) {
-        if (this.is('hook:' + event)) {
-            EventManager.hook(event, hookFunction);
-        }
-
-        return this;
-    };
-
-    /**
-     * Removes hook from specific event
-     *
-     * @param {String}   event
-     *
-     * @returns {Sandbox}
-     */
-    Sandbox.prototype.unhook = function (event) {
-        if (this.is('hook:' + event)) {
-            EventManager.unhook(event);
+            EventManager.trigger(event, data);
         }
 
         return this;
@@ -504,11 +442,11 @@
     // exports
     return Sandbox;
 },
-"locales": {"MessageView":{"text_label":{"ru":"Он сказал: ","en":"He said: "}},"DataGenerator":{},"Logger":{},"Hook":{}},
+"locales": {"MessageView":{"text_label":{"ru":"Он сказал: ","en":"He said: "}},"DataGenerator":{},"Logger":{}},
 "templates": {"MessageView":"<div class=\"b-message-view\">\r\n    <span class=\"b-message-view__label\">{%=label%}</span><span class=\"b-message-view__value\">{%=value%}</span>\r\n</div>"},
-"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}},"Hook":{"name":"Hook","acl":{"hook:*":true},"resources":{}}},
+"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}}},
 "descriptor": {
-    "modules": ["MessageView", "DataGenerator", "Logger", "Hook"],
+    "modules": ["MessageView", "DataGenerator", "Logger"],
     "layout": {
         "MessageView": ".b-message-view"
     },
@@ -581,28 +519,6 @@
             sandbox.bind('ready', printLog);
         },
         destroy: function () {}
-    };
-},
-"Hook": function Hook(sandboxed, exports, module) {
-    "use strict";
-    var sb;
-
-    return {
-        init: function (sandbox) {
-            sb = sandbox;
-            sandbox.hook('newData', function (data) {
-                if (typeof data === "string") {
-                    return false;
-                }
-                if (data < 0.5) {
-                    data = data * 100;
-                }
-                return data;
-            });
-        },
-        destroy: function () {
-            sb.unhook('newData');    
-        }
     };
 }
 })(/**
