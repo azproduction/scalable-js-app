@@ -1,7 +1,8 @@
 {
     "modules": ["MessageView", "DataGenerator", "Logger"],
+    "safe_modules": ["Logger"],
     "layout": {
-        "MessageView": ".b-message-view"
+        "MessageView": "b-message-view"
     },
     "locale": "ru",
     "path": {

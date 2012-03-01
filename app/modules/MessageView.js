@@ -5,21 +5,20 @@ function MessageView(sandboxed, exports, module) {
     var MessageView = function (sandbox) {
         var self = this;
         this.sandbox = sandbox;
-        this.template = sandbox.getTemplate(".b-message-view");
+        this.template = sandbox.getTemplate("b-message-view");
         this.label = sandbox.getText("text_label");
-        this.$box = sandbox.getBox();
+        this.parentElement = sandbox.getBox();
 
-        sandbox.bind('newData', function (_, text) {
-            self.update(text);
+        sandbox.bind('newData', function (event) {
+            self.update(event.data);
         });
     };
 
     MessageView.prototype.update = function (text) {
-        var html = this.template({
+        this.parentElement.innerHTML = this.template({
             label: this.label,
             value: text
         });
-        this.$box.html(html);
         this.sandbox.trigger('newData:display');
     };
 

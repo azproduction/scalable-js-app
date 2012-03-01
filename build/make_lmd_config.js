@@ -113,7 +113,10 @@ var collectSandboxedModules = function () {
     var modules = {};
 
     appConfig.modules.forEach(function (moduleName) {
-        modules[moduleName] = true;
+        // skip safe modules
+        if (appConfig.safe_modules.indexOf(moduleName) === -1) {
+            modules[moduleName] = true;
+        }
     });
 
     return modules;

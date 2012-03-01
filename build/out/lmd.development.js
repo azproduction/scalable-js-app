@@ -47,12 +47,11 @@
             return lmd;
         };
     return lmd;
-})(window,{"MessageView":true,"DataGenerator":true,"Logger":true})({
+})(window,{"MessageView":true,"DataGenerator":true})({
 "Core": function Core(require, exports) {
     "use strict";
 
-    var $ = require('$'),
-        templateFactory = require('Template'),
+    var templateFactory = require('Template'),
         Sandbox = require('Sandbox'),
         EventManager = require('EventManager');
 
@@ -160,7 +159,7 @@
                 this.runningModules[name].destroy();
                 
                 // Cleanup
-                EventManager.unbind('.' + name);
+                EventManager.unbindAllNs(name);
                 this.getBox().html('');
                 delete this.runningModules[name];
             }
@@ -172,26 +171,54 @@
          *
          * @param {String} name
          *
-         * @returns {HTMLElement|undefined}
+         * @returns {HTMLElement|null}
          */
         getBox: function (name) {
-            return ($(this.descriptor.layout[name]));
+            var elementId = this.descriptor.layout[name];
+            if (elementId) {
+                return document.getElementById(elementId);
+            }
+            return null;
         },
 
         /**
          * Gets module template
          *
          * @param {String} moduleName
-         * @param {String} templateSelector
+         * @param {String} templateId
          *
          * @returns {Function|undefined}
          */
-        getTemplate: function (moduleName, templateSelector) {
+        getTemplate: function (moduleName, templateId) {
             if (typeof this.templates[moduleName] === "string") {
                 // wrap all templates
-                this.templates[moduleName] = $('<div/>').html(this.templates[moduleName]);
+                var div = document.createElement('div');
+                div.innerHTML = this.templates[moduleName];
+                this.templates[moduleName] = div;
             }
-            return templateFactory(this.templates[moduleName].find(templateSelector).html());
+            var templateElement = this._getElementById(this.templates[moduleName], templateId);
+            return templateFactory(templateElement ? templateElement.innerHTML : '');
+        },
+
+        /**
+         * polyfill
+         */
+        _getElementById: function (element, elementId) {
+            if (element.querySelector) { // modern browser
+                return element.querySelector('#' + elementId);
+            }
+
+            var nodes = element.childNodes;
+            for (var i = 0, c = nodes.length; i < c; i++) {
+                if (nodes[i].getAttribute) { // its element
+                    if (nodes[i].getAttribute('id') === elementId) {
+                        return nodes[i];
+                    } else {
+                        return this._getElementById(nodes[i], elementId);
+                    }
+                }
+            }
+            return null;
         },
 
         /**
@@ -217,7 +244,7 @@
         trigger:       bind(EventManager.trigger, EventManager),
         bind:          bind(EventManager.bind, EventManager),
         unbind:        bind(EventManager.unbind, EventManager),
-        on:            bind(EventManager.bind, EventManager),
+        unbindAllNs:   bind(EventManager.unbindAllNs, EventManager),
 
         init:          bind(Core.init, Core),
         destroyModule: bind(Core.destroyModule, Core),
@@ -226,6 +253,10 @@
         getText:       bind(Core.getText, Core),
         getBox:        bind(Core.getBox, Core)
     };
+
+    // aliases
+    coreExports.on = coreExports.bind;
+    coreExports.off = coreExports.unbind;
 
     // exports
     for (var i in coreExports) {
@@ -265,48 +296,184 @@
     };
 },
 "EventManager": function EventManager(require) {
-    var $ = require('$');
 
     /**
     * @namespace
     */
     return {
         /**
-        * @type jQuery
-        */
-        $: $('<div/>'),
+         * @type {Object}
+         *
+         * @format
+         *
+         * {
+         *     "eventName": {
+         *         "namespace": [function, ...],
+         *         ...
+         *     },
+         *     ...
+         * }
+         */
+        eventsNs: {},
+
         /**
-        * Hooked version of jQuery#trigger
-        *
-        * @param {String} event
-        * @param {Array}  data
-        *
-        * @returns {EventManager}
-        */
-        trigger: function (event, data) {
-            this.$.trigger.apply(this.$, [event, data]);
+         *
+         * @param {String} eventName
+         * @param {String} [eventNamespace]
+         *
+         * @returns {Array|Object}
+         */
+        _getEventListNs: function (eventName, eventNamespace) {
+            var self = this;
+            if (!self.eventsNs[eventName]) {
+                self.eventsNs[eventName] = {};
+            }
+
+            if (eventNamespace) {
+                if (!self.eventsNs[eventName][eventNamespace]) {
+                    self.eventsNs[eventName][eventNamespace] = [];
+                }
+                return self.eventsNs[eventName][eventNamespace];
+            } else {
+                return self.eventsNs[eventName];
+            }
+        },
+
+        /**
+         *
+         * @param {String} events
+         *
+         * @returnts {String[]}
+         */
+        _parseEventsString: function (events) {
+            var eventList = events.split(' '),
+                result = [];
+
+            // filter empty strings
+            for (var i = 0, c = eventList.length; i < c; i++) {
+                if (eventList[i]) {
+                    result.push(eventList[i]);
+                }
+            }
+
+            return result;
+        },
+
+        /**
+         * @param {String}  events
+         * @param {Array}   data
+         * @param {Boolean} [is_safe=false]
+         *
+         * @returns {EventManager}
+         */
+        trigger: function (events, data, is_safe) {
+            if (typeof events === "string") {
+                events = this._parseEventsString(events);
+
+                // loop events
+                for (var i = 0, c = events.length, eventListNs, eventList, eventName; i < c; i++) {
+                    eventName = events[i];
+                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks]}
+                    // loop namespaces
+                    for (var namespace in eventListNs) {
+                        if (eventListNs.hasOwnProperty(namespace)) {
+                            eventList = eventListNs[namespace]; // [listOfCallbacks]
+                            // loop callbacks
+                            for (var j = 0, c1 = eventList.length, event; j < c1; j++) {
+                                event = {type: events[i], data: data};
+                                // dont catch error
+                                if (is_safe) {
+                                    try {
+                                        eventList[j](event);
+                                    } catch (e) {}
+                                } else {
+                                    eventList[j](event);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             return this;
         },
+
         /**
-        * Remap of jQuery#bind
-        *
-        * @see jQuery#bind
-        *
-        * @returns {EventManager}
-        */
-        bind: function () {
-            this.$.bind.apply(this.$, arguments);
+         *
+         * @param {String}   events
+         * @param {Function} callback
+         * @param {String}   [namespace="*"]
+         *
+         * bind(events, callback) bind callback to event of namespace '*'
+         * bind(events, callback, namespace) bind callback to event of namespace
+         *
+         * @returns {EventManager}
+         */
+        bind: function (events, callback, namespace) {
+            if (typeof events === "string" && typeof callback === "function") {
+                namespace = namespace || '*';
+                events = this._parseEventsString(events);
+
+                for (var i = 0, c = events.length; i < c; i++) {
+                    this._getEventListNs(events[i], namespace).push(callback);
+                }
+            }
             return this;
         },
+
         /**
-        * Remap of jQuery#bind
-        *
-        * @see jQuery#unbind
-        *
-        * @returns {EventManager}
-        */
-        unbind: function () {
-            this.$.unbind.apply(this.$, arguments);
+         *
+         * @param {String}          events          events
+         * @param {Function|String} [callback]      callback or namespace
+         * @param {String}          [namespace="*"] namespace or undefined
+         *
+         * @example
+         * unbind(event) wipe all callbcaks of namespace '*'
+         * unbind(event, function) remove one callback of event of namespace '*'
+         * unbind(event, namespace) wipe all callbacks of event of namespace
+         * unbind(event, function, namespace) remove one callback of event of namespace
+         *
+         * @returns {EventManager}
+         */
+        unbind: function (events, callback, namespace) {
+            if (typeof events === "string") {
+                if (typeof callback === "string" && typeof namespace === "undefined") {
+                    namespace = callback;
+                    callback = void 0;
+                }
+                namespace = namespace || '*';
+                events = this._parseEventsString(events);
+                for (var i = 0, c = events.length, eventList, callbackIndex; i < c; i++) {
+                    eventList = this._getEventListNs(events[i], namespace);
+                    if (callback) {
+                        callbackIndex = eventList.indexOf(callback);
+                        if (callbackIndex !== -1) {
+                            eventList.splice(callbackIndex, 1);
+                        }
+                    } else {
+                        eventList.splice(0); // wipe
+                    }
+                }
+            }
+            return this;
+        },
+
+        /**
+         * Unbinds all events of selected namespace
+         *
+         * @param {String} namespace
+         *
+         * @returns {EventManager}
+         */
+        unbindAllNs: function (namespace) {
+            var eventListNs;
+            for (var eventName in this.eventsNs) {
+                if (this.eventsNs.hasOwnProperty(eventName)) {
+                    eventListNs = this.eventsNs[eventName];
+                    if (eventListNs[namespace]) {
+                        eventListNs[namespace] = [];
+                    }
+                }
+            }
             return this;
         }
     };
@@ -367,7 +534,7 @@
     Sandbox.prototype.bind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.bind(event + '.' + this.descriptor.name, callback);
+            EventManager.bind(event, callback, this.descriptor.name);
         }
 
         return this;
@@ -377,14 +544,14 @@
      * Unbinds specific event
      *
      * @param {String}   event
-     * @param {Function} callback
+     * @param {Function} [callback]
      *
      * @returns {Sandbox}
      */
     Sandbox.prototype.unbind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.unbind(event + '.' + this.descriptor.name, callback);
+            EventManager.unbind(event, callback, this.descriptor.name);
         }
 
         return this;
@@ -394,7 +561,7 @@
      * Triggers specific event
      *
      * @param {String} event
-     * @param {Mixed}  data
+     * @param          data
      *
      * @returns {Sandbox}
      */
@@ -443,12 +610,13 @@
     return Sandbox;
 },
 "locales": {"MessageView":{"text_label":{"ru":"Он сказал: ","en":"He said: "}},"DataGenerator":{},"Logger":{}},
-"templates": {"MessageView":"<div class=\"b-message-view\">\r\n    <span class=\"b-message-view__label\">{%=label%}</span><span class=\"b-message-view__value\">{%=value%}</span>\r\n</div>"},
+"templates": {"MessageView":"<div class=\"b-message-view\" id=\"b-message-view\">\r\n    <span class=\"b-message-view__label\">{%=label%}</span><span class=\"b-message-view__value\">{%=value%}</span>\r\n</div>"},
 "descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}}},
 "descriptor": {
     "modules": ["MessageView", "DataGenerator", "Logger"],
+    "safe_modules": ["Logger"],
     "layout": {
-        "MessageView": ".b-message-view"
+        "MessageView": "b-message-view"
     },
     "locale": "ru",
     "path": {
@@ -465,21 +633,20 @@
     var MessageView = function (sandbox) {
         var self = this;
         this.sandbox = sandbox;
-        this.template = sandbox.getTemplate(".b-message-view");
+        this.template = sandbox.getTemplate("b-message-view");
         this.label = sandbox.getText("text_label");
-        this.$box = sandbox.getBox();
+        this.parentElement = sandbox.getBox();
 
-        sandbox.bind('newData', function (_, text) {
-            self.update(text);
+        sandbox.bind('newData', function (event) {
+            self.update(event.data);
         });
     };
 
     MessageView.prototype.update = function (text) {
-        var html = this.template({
+        this.parentElement.innerHTML = this.template({
             label: this.label,
             value: text
         });
-        this.$box.html(html);
         this.sandbox.trigger('newData:display');
     };
 
@@ -507,10 +674,13 @@
         }
     };
 },
-"Logger": function Logger(sandboxed, exports, module) {
+"Logger": function Logger(require, exports, module) {
+    // this modules is safe - can include orther modules
+    var log = require('console').log;
+
     "use strict";
-    var printLog = function (event, data) {
-        console.log(event.type, data);
+    var printLog = function (event) {
+        log(event.type, event.data);
     };
         
     return {

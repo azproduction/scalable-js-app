@@ -14,7 +14,7 @@ function TemplateTest (require) {
 
     module('Template');
 
-    test("Main Template test", function() {
+    test("basic test", function() {
         templateResult = templateFactory(template);
         ok(typeof templateResult === "function", "template factory should return a function if only template passed");
         equal("<div>123</div>", templateResult({a: 123}), "should work multiply times");

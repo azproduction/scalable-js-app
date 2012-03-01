@@ -1,7 +1,10 @@
-function Logger(sandboxed, exports, module) {
+function Logger(require, exports, module) {
+    // this modules is safe - can include orther modules
+    var log = require('console').log;
+
     "use strict";
-    var printLog = function (event, data) {
-        console.log(event.type, data);
+    var printLog = function (event) {
+        log(event.type, event.data);
     };
         
     return {

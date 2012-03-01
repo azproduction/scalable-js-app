@@ -48,6 +48,16 @@ Changelog
  - All application modules (not lib modules) are totally sandboxed (cant require at all)
  - Simple acl wildcards support `listen:*` and `*` but not `listen:ololo:*`
 
+**v2.1** (not compatable with v2.0)
+
+  - SJSA no longer depend on jQuery nor Zepto
+  - Sandbox#bind and Sandbox#trigger now accepts multiply event names
+  - Sandbox#getBox now returns HTMLElement instead of jQuery/Zepto instance
+  - Core.getBox uses getElementById instead of jQuery/Zepto selector
+  - Sandbox#getTemplate now accept elementId instead of selector (all templates should be marked with id)
+  - app descriptor can content list of safe modules (can require other modules) see `app/modules/Logger.js` for example
+  - EventManager totally refactored see `test/units/EventManagerTest.js` for details
+
 Licence
 -------
 

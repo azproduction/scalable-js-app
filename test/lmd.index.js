@@ -66,20 +66,22 @@
         equal = require('equal'),
         test = require('test'),
         expect = require('expect'),
-        module = require('module');
+        module = require('module'),
+        raises = require('raises');
 
     var EventManager = require('EventManager');
 
     module('EventManager');
 
-    test("EventManager test", function() {
-        expect(2);
+    test("basic test", function() {
+        expect(3);
 
         var data = {data: 'data'};
         var namespace = 'mytestnamespace';
-        var listenterThatShouldFire = function (event, incomeData) {
+        var listenterThatShouldFire = function (event) {
             ok(true, "event fired");
-            equal(data, incomeData, 'should pass data');
+            equal(data, event.data, 'should pass data');
+            equal('event1', event.type, 'should pass event name');
         };
 
         var listenterThatShouldndFire = function () {
@@ -94,21 +96,109 @@
 
         //
         EventManager.bind('event2', listenterThatShouldndFire);
-        EventManager.bind('event2.' + namespace, listenterThatShouldndFire);
+        EventManager.bind('event2', listenterThatShouldndFire, namespace);
 
 
         // EventManager.unbind
-        EventManager.unbind('event2.' + namespace);
+        EventManager.unbind('event2', namespace);
         EventManager.unbind('event2', listenterThatShouldndFire);
         EventManager.trigger('event2'); // 0
 
         // EventManager.unbind
         EventManager.unbind('event1', listenterThatShouldFire);
-        EventManager.unbind('event1.' + namespace);
+        EventManager.unbind('event1', namespace);
         EventManager.trigger('event1', {}); // 0
         EventManager.trigger('event2', {}); // 0
 
 
+    });
+
+    test("bind test", function() {
+        expect(7);
+
+        var listenter = function (event) {
+            ok(event.data.ok, "event fired");
+        };
+
+        var listenterThatShouldndFire = function (event) {
+            ok(false, "event fired");
+        };
+
+        EventManager.bind('  event1 event2 event2   ', listenter);
+        EventManager.bind('event1', listenter);
+        EventManager.bind('event1', listenter, "namespace");
+        EventManager.trigger('event1 event2', {ok: true}); // 5
+
+        EventManager.bind('event1', listenterThatShouldndFire, "namespace");
+        EventManager.unbind('event1', "namespace"); // should unbind listenterThatShouldndFire and listenter
+        EventManager.trigger('event1', {ok: true}); // 2
+
+        EventManager.unbind('event1 event2');
+
+        EventManager.trigger('event1 event2', {ok: false}); // 0
+    });
+
+    test("bind namespace test", function() {
+        expect(20);
+
+        var listenter = function (event) {
+            ok(event.data.ok, "event fired");
+        };
+
+        var listenterThatShouldndFire = function (event) {
+            ok(false, "event fired");
+        };
+
+        EventManager.bind('event1', listenterThatShouldndFire, "namespace");
+        EventManager.bind('event2', listenterThatShouldndFire, "namespace");
+        EventManager.bind('event3', listenterThatShouldndFire, "namespace");
+
+        EventManager.unbindAllNs("namespace");
+
+        EventManager.trigger('event1 event2 event3', {ok: false}); // 0
+
+        EventManager.bind('event1', listenter);
+        EventManager.bind('event1', listenter);
+        EventManager.bind('event1', listenter);
+        EventManager.bind('event1', listenter, "namespace");
+        EventManager.bind('event1', listenter, "namespace");
+        EventManager.bind('event1', listenter, "namespace");
+        EventManager.bind('event1', listenter, "namespace2");
+
+        EventManager.trigger('event1', {ok: true}); // 7
+
+        EventManager.unbind('event1', listenter);
+        EventManager.trigger('event1', {ok: true}); // 6
+
+        EventManager.unbind('event1');
+        EventManager.trigger('event1', {ok: true}); // 4
+
+        EventManager.unbind('event1', listenter, "namespace");
+        EventManager.trigger('event1', {ok: true}); // 3
+
+        EventManager.unbind('event1', "namespace");
+        EventManager.unbind('event1', "namespace2");
+
+        EventManager.trigger('event1', {ok: false}); // 0
+    });
+
+    test("trigger test", function() {
+        expect(2);
+        EventManager.bind('event1', function () {
+            throw new Error("Some error text");
+        });
+
+        EventManager.bind('event1', function () {
+            ok(true, "event should fire after error");
+        });
+
+        raises(function () {
+            EventManager.trigger('event1', {});
+        }, "shouldnt catch error");
+
+        EventManager.trigger('event1', {}, true); // 1 safe trigger
+
+        EventManager.unbind('event1'); // cleanup
     });
 },
 "SandboxTest": function SandboxTest (require) {
@@ -140,7 +230,7 @@
 
     module('Template');
 
-    test("Main Template test", function() {
+    test("basic test", function() {
         templateResult = templateFactory(template);
         ok(typeof templateResult === "function", "template factory should return a function if only template passed");
         equal("<div>123</div>", templateResult({a: 123}), "should work multiply times");
@@ -161,8 +251,7 @@
 "Core": function Core(require, exports) {
     "use strict";
 
-    var $ = require('$'),
-        templateFactory = require('Template'),
+    var templateFactory = require('Template'),
         Sandbox = require('Sandbox'),
         EventManager = require('EventManager');
 
@@ -217,6 +306,7 @@
          * @returns Core
          */
         init: function (data) {
+            data = data || {};
             this.descriptor = data.descriptor || require('descriptor');
             this.descriptor.modules = this.descriptor.modules || [];
             this.descriptor.layout = this.descriptor.layout || {};
@@ -269,7 +359,7 @@
                 this.runningModules[name].destroy();
                 
                 // Cleanup
-                EventManager.unbind('.' + name);
+                EventManager.unbindAllNs(name);
                 this.getBox().html('');
                 delete this.runningModules[name];
             }
@@ -284,23 +374,49 @@
          * @returns {HTMLElement|undefined}
          */
         getBox: function (name) {
-            return ($(this.descriptor.layout[name]));
+            var elementId = this.descriptor.layout[name];
+            if (elementId) {
+                return document.getElementById(elementId);
+            }
         },
 
         /**
          * Gets module template
          *
          * @param {String} moduleName
-         * @param {String} templateSelector
+         * @param {String} templateId
          *
          * @returns {Function|undefined}
          */
-        getTemplate: function (moduleName, templateSelector) {
+        getTemplate: function (moduleName, templateId) {
             if (typeof this.templates[moduleName] === "string") {
                 // wrap all templates
-                this.templates[moduleName] = $('<div/>').html(this.templates[moduleName]);
+                this.templates[moduleName] = document.createElement('div');
+                this.templates[moduleName].innerHTML = this.templates[moduleName];
             }
-            return templateFactory(this.templates[moduleName].find(templateSelector).html());
+            var templateElement = this._getElementById(this.templates[moduleName], templateId);
+            return templateFactory(templateElement ? templateElement.innerHTML : '');
+        },
+
+        /**
+         * polyfill
+         */
+        _getElementById: function (element, elementId) {
+            if (element.querySelector) { // modern browser
+                return element.querySelector('#' + elementId);
+            }
+
+            var nodes = element.childNodes;
+            for (var i = 0, c = nodes.length; i < c; i++) {
+                if (nodes[i].getAttribute) { // its element
+                    if (nodes[i].getAttribute('id') === elementId) {
+                        return nodes[i];
+                    } else {
+                        return this._getElementById(nodes[i], elementId);
+                    }
+                }
+            }
+            return null;
         },
 
         /**
@@ -326,7 +442,7 @@
         trigger:       bind(EventManager.trigger, EventManager),
         bind:          bind(EventManager.bind, EventManager),
         unbind:        bind(EventManager.unbind, EventManager),
-        on:            bind(EventManager.bind, EventManager),
+        unbindAllNs:   bind(EventManager.unbindAllNs, EventManager),
 
         init:          bind(Core.init, Core),
         destroyModule: bind(Core.destroyModule, Core),
@@ -335,6 +451,10 @@
         getText:       bind(Core.getText, Core),
         getBox:        bind(Core.getBox, Core)
     };
+
+    // aliases
+    coreExports.on = coreExports.bind;
+    coreExports.off = coreExports.unbind;
 
     // exports
     for (var i in coreExports) {
@@ -397,7 +517,7 @@
     Sandbox.prototype.bind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.bind(event + '.' + this.descriptor.name, callback);
+            EventManager.bind(event, callback, this.descriptor.name);
         }
 
         return this;
@@ -407,14 +527,14 @@
      * Unbinds specific event
      *
      * @param {String}   event
-     * @param {Function} callback
+     * @param {Function} [callback]
      *
      * @returns {Sandbox}
      */
     Sandbox.prototype.unbind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.unbind(event + '.' + this.descriptor.name, callback);
+            EventManager.unbind(event, callback, this.descriptor.name);
         }
 
         return this;
@@ -424,44 +544,13 @@
      * Triggers specific event
      *
      * @param {String} event
-     * @param {Mixed}  data
+     * @param          data
      *
      * @returns {Sandbox}
      */
     Sandbox.prototype.trigger = function (event, data) {
         if (this.is('trigger:' + event)) {
             EventManager.trigger(event, data);
-        }
-
-        return this;
-    };
-
-    /**
-     * Hooks specific event
-     *
-     * @param {String}   event
-     * @param {Function} hookFunction
-     *
-     * @returns {Sandbox}
-     */
-    Sandbox.prototype.hook = function (event, hookFunction) {
-        if (this.is('hook:' + event)) {
-            EventManager.hook(event, hookFunction);
-        }
-
-        return this;
-    };
-
-    /**
-     * Removes hook from specific event
-     *
-     * @param {String}   event
-     *
-     * @returns {Sandbox}
-     */
-    Sandbox.prototype.unhook = function (event) {
-        if (this.is('hook:' + event)) {
-            EventManager.unhook(event);
         }
 
         return this;
@@ -536,48 +625,184 @@
     };
 },
 "EventManager": function EventManager(require) {
-    var $ = require('$');
 
     /**
     * @namespace
     */
     return {
         /**
-        * @type jQuery
-        */
-        $: $('<div/>'),
+         * @type {Object}
+         *
+         * @format
+         *
+         * {
+         *     "eventName": {
+         *         "namespace": [function, ...],
+         *         ...
+         *     },
+         *     ...
+         * }
+         */
+        eventsNs: {},
+
         /**
-        * Hooked version of jQuery#trigger
-        *
-        * @param {String} event
-        * @param {Array}  data
-        *
-        * @returns {EventManager}
-        */
-        trigger: function (event, data) {
-            this.$.trigger.apply(this.$, [event, data]);
+         *
+         * @param {String} eventName
+         * @param {String} [eventNamespace]
+         *
+         * @returns {Array|Object}
+         */
+        _getEventListNs: function (eventName, eventNamespace) {
+            var self = this;
+            if (!self.eventsNs[eventName]) {
+                self.eventsNs[eventName] = {};
+            }
+
+            if (eventNamespace) {
+                if (!self.eventsNs[eventName][eventNamespace]) {
+                    self.eventsNs[eventName][eventNamespace] = [];
+                }
+                return self.eventsNs[eventName][eventNamespace];
+            } else {
+                return self.eventsNs[eventName];
+            }
+        },
+
+        /**
+         *
+         * @param {String} events
+         *
+         * @returnts {String[]}
+         */
+        _parseEventsString: function (events) {
+            var eventList = events.split(' '),
+                result = [];
+
+            // filter empty strings
+            for (var i = 0, c = eventList.length; i < c; i++) {
+                if (eventList[i]) {
+                    result.push(eventList[i]);
+                }
+            }
+
+            return result;
+        },
+
+        /**
+         * @param {String}  events
+         * @param {Array}   data
+         * @param {Boolean} [is_safe=false]
+         *
+         * @returns {EventManager}
+         */
+        trigger: function (events, data, is_safe) {
+            if (typeof events === "string") {
+                events = this._parseEventsString(events);
+
+                // loop events
+                for (var i = 0, c = events.length, eventListNs, eventList, eventName; i < c; i++) {
+                    eventName = events[i];
+                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks]}
+                    // loop namespaces
+                    for (var namespace in eventListNs) {
+                        if (eventListNs.hasOwnProperty(namespace)) {
+                            eventList = eventListNs[namespace]; // [listOfCallbacks]
+                            // loop callbacks
+                            for (var j = 0, c1 = eventList.length, event; j < c1; j++) {
+                                event = {type: events[i], data: data};
+                                // dont catch error
+                                if (is_safe) {
+                                    try {
+                                        eventList[j](event);
+                                    } catch (e) {}
+                                } else {
+                                    eventList[j](event);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             return this;
         },
+
         /**
-        * Remap of jQuery#bind
-        *
-        * @see jQuery#bind
-        *
-        * @returns {EventManager}
-        */
-        bind: function () {
-            this.$.bind.apply(this.$, arguments);
+         *
+         * @param {String}   events
+         * @param {Function} callback
+         * @param {String}   [namespace="*"]
+         *
+         * bind(events, callback) bind callback to event of namespace '*'
+         * bind(events, callback, namespace) bind callback to event of namespace
+         *
+         * @returns {EventManager}
+         */
+        bind: function (events, callback, namespace) {
+            if (typeof events === "string" && typeof callback === "function") {
+                namespace = namespace || '*';
+                events = this._parseEventsString(events);
+
+                for (var i = 0, c = events.length; i < c; i++) {
+                    this._getEventListNs(events[i], namespace).push(callback);
+                }
+            }
             return this;
         },
+
         /**
-        * Remap of jQuery#bind
-        *
-        * @see jQuery#unbind
-        *
-        * @returns {EventManager}
-        */
-        unbind: function () {
-            this.$.unbind.apply(this.$, arguments);
+         *
+         * @param {String}          events          events
+         * @param {Function|String} [callback]      callback or namespace
+         * @param {String}          [namespace="*"] namespace or undefined
+         *
+         * @example
+         * unbind(event) wipe all callbcaks of namespace '*'
+         * unbind(event, function) remove one callback of event of namespace '*'
+         * unbind(event, namespace) wipe all callbacks of event of namespace
+         * unbind(event, function, namespace) remove one callback of event of namespace
+         *
+         * @returns {EventManager}
+         */
+        unbind: function (events, callback, namespace) {
+            if (typeof events === "string") {
+                if (typeof callback === "string" && typeof namespace === "undefined") {
+                    namespace = callback;
+                    callback = void 0;
+                }
+                namespace = namespace || '*';
+                events = this._parseEventsString(events);
+                for (var i = 0, c = events.length, eventList, callbackIndex; i < c; i++) {
+                    eventList = this._getEventListNs(events[i], namespace);
+                    if (callback) {
+                        callbackIndex = eventList.indexOf(callback);
+                        if (callbackIndex !== -1) {
+                            eventList.splice(callbackIndex, 1);
+                        }
+                    } else {
+                        eventList.splice(0); // wipe
+                    }
+                }
+            }
+            return this;
+        },
+
+        /**
+         * Unbinds all events of selected namespace
+         *
+         * @param {String} namespace
+         *
+         * @returns {EventManager}
+         */
+        unbindAllNs: function (namespace) {
+            var eventListNs;
+            for (var eventName in this.eventsNs) {
+                if (this.eventsNs.hasOwnProperty(eventName)) {
+                    eventListNs = this.eventsNs[eventName];
+                    if (eventListNs[namespace]) {
+                        eventListNs[namespace] = [];
+                    }
+                }
+            }
             return this;
         }
     };
