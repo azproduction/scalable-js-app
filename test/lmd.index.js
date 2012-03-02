@@ -200,6 +200,22 @@
 
         EventManager.unbind('event1'); // cleanup
     });
+
+    test("one namespace trigger test", function() {
+        expect(1);
+
+        EventManager.bind('event1', function () {
+            ok(true, "event should fire");
+        }, 'namespace');
+
+        EventManager.bind('event1', function () {
+            ok(false, "event shouldnt fire");
+        }, 'namespace2');
+
+        EventManager.trigger('event1', {}, false, 'namespace'); // 1
+
+        EventManager.unbind('event1'); // cleanup
+    });
 },
 "SandboxTest": function SandboxTest (require) {
     var ok = require('ok'),
@@ -296,7 +312,7 @@
         /**
          * @type Object
          */
-        runningModules: {},
+        sandboxes: {},
 
         /**
          * Starts app
@@ -337,12 +353,13 @@
          * @returns Core
          */
         initModule: function (name) {
-            if (this.runningModules[name]) {
+            if (this.sandboxes[name]) {
                 return this;
             }
             var sandbox = new Sandbox(this.descriptors[name]);
-            this.runningModules[name] = require(name);
-            this.runningModules[name].init(sandbox);
+            this.sandboxes[name] = sandbox;
+
+            new require(name)(sandbox);
 
             return this;
         },
@@ -355,13 +372,17 @@
          * @returns Core
          */
         destroyModule: function (name) {
-            if (this.runningModules[name]) {
-                this.runningModules[name].destroy();
+            var sandbox = this.sandboxes[name];
+            if (sandbox) {
+                EventManager.trigger('destroy', null, true, sandbox.namespace);
                 
                 // Cleanup
-                EventManager.unbindAllNs(name);
-                this.getBox().html('');
-                delete this.runningModules[name];
+                EventManager.unbindAllNs(sandbox.namespace);
+                var box = this.getBox();
+                if (box) {
+                    box.innerHTML = '';
+                }
+                delete this.sandboxes[name];
             }
             return this;
         },
@@ -371,13 +392,14 @@
          *
          * @param {String} name
          *
-         * @returns {HTMLElement|undefined}
+         * @returns {HTMLElement|null}
          */
         getBox: function (name) {
             var elementId = this.descriptor.layout[name];
             if (elementId) {
                 return document.getElementById(elementId);
             }
+            return null;
         },
 
         /**
@@ -391,8 +413,9 @@
         getTemplate: function (moduleName, templateId) {
             if (typeof this.templates[moduleName] === "string") {
                 // wrap all templates
-                this.templates[moduleName] = document.createElement('div');
-                this.templates[moduleName].innerHTML = this.templates[moduleName];
+                var div = document.createElement('div');
+                div.innerHTML = this.templates[moduleName];
+                this.templates[moduleName] = div;
             }
             var templateElement = this._getElementById(this.templates[moduleName], templateId);
             return templateFactory(templateElement ? templateElement.innerHTML : '');
@@ -465,12 +488,15 @@
     var Core = require('Core'),
         EventManager = require('EventManager');
 
+    var uuid = 0;
+
     /**
      * @constructor
      * @param {Object} descriptor
      */
     var Sandbox = function (descriptor) {
         this.descriptor = descriptor || {};
+        this.namespace = this.descriptor.name + ++uuid;
     };
 
     /**
@@ -517,7 +543,7 @@
     Sandbox.prototype.bind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.bind(event, callback, this.descriptor.name);
+            EventManager.bind(event, callback, this.namespace);
         }
 
         return this;
@@ -534,7 +560,7 @@
     Sandbox.prototype.unbind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.unbind(event, callback, this.descriptor.name);
+            EventManager.unbind(event, callback, this.namespace);
         }
 
         return this;
@@ -689,24 +715,28 @@
         },
 
         /**
-         * @param {String}  events
-         * @param {Array}   data
-         * @param {Boolean} [is_safe=false]
+         * @param {String}  events          event string list
+         * @param {Array}   data            event data
+         * @param {Boolean} [is_safe=false] do catch callback errors
+         * @param {String}  ns              trigger for that namespace only
          *
          * @returns {EventManager}
          */
-        trigger: function (events, data, is_safe) {
+        trigger: function (events, data, is_safe, ns) {
             if (typeof events === "string") {
                 events = this._parseEventsString(events);
 
                 // loop events
                 for (var i = 0, c = events.length, eventListNs, eventList, eventName; i < c; i++) {
                     eventName = events[i];
-                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks]}
+                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks, ...], ...}
                     // loop namespaces
                     for (var namespace in eventListNs) {
+                        if (ns && ns !== namespace) {
+                            continue;
+                        }
                         if (eventListNs.hasOwnProperty(namespace)) {
-                            eventList = eventListNs[namespace]; // [listOfCallbacks]
+                            eventList = eventListNs[namespace]; // [listOfCallbacks, ...]
                             // loop callbacks
                             for (var j = 0, c1 = eventList.length, event; j < c1; j++) {
                                 event = {type: events[i], data: data};

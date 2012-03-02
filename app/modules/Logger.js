@@ -7,11 +7,8 @@ function Logger(require, exports, module) {
         log(event.type, event.data);
     };
         
-    return {
-        init: function (sandbox) {
-            sandbox.bind('newData', printLog);
-            sandbox.bind('ready', printLog);
-        },
-        destroy: function () {}
+    return function (sandbox) {
+        sandbox.bind('newData', printLog);
+        sandbox.bind('ready', printLog);
     };
 }

@@ -96,7 +96,7 @@
         /**
          * @type Object
          */
-        runningModules: {},
+        sandboxes: {},
 
         /**
          * Starts app
@@ -137,12 +137,14 @@
          * @returns Core
          */
         initModule: function (name) {
-            if (this.runningModules[name]) {
+            if (this.sandboxes[name]) {
                 return this;
             }
             var sandbox = new Sandbox(this.descriptors[name]);
-            this.runningModules[name] = require(name);
-            this.runningModules[name].init(sandbox);
+            var module = require(name);
+            this.sandboxes[name] = sandbox;
+
+            new module(sandbox);
 
             return this;
         },
@@ -155,13 +157,17 @@
          * @returns Core
          */
         destroyModule: function (name) {
-            if (this.runningModules[name]) {
-                this.runningModules[name].destroy();
+            var sandbox = this.sandboxes[name];
+            if (sandbox) {
+                EventManager.trigger('destroy', null, true, sandbox.namespace);
                 
                 // Cleanup
-                EventManager.unbindAllNs(name);
-                this.getBox().html('');
-                delete this.runningModules[name];
+                EventManager.unbindAllNs(sandbox.namespace);
+                var box = this.getBox();
+                if (box) {
+                    box.innerHTML = '';
+                }
+                delete this.sandboxes[name];
             }
             return this;
         },
@@ -360,24 +366,28 @@
         },
 
         /**
-         * @param {String}  events
-         * @param {Array}   data
-         * @param {Boolean} [is_safe=false]
+         * @param {String}  events          event string list
+         * @param {Array}   data            event data
+         * @param {Boolean} [is_safe=false] do catch callback errors
+         * @param {String}  ns              trigger for that namespace only
          *
          * @returns {EventManager}
          */
-        trigger: function (events, data, is_safe) {
+        trigger: function (events, data, is_safe, ns) {
             if (typeof events === "string") {
                 events = this._parseEventsString(events);
 
                 // loop events
                 for (var i = 0, c = events.length, eventListNs, eventList, eventName; i < c; i++) {
                     eventName = events[i];
-                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks]}
+                    eventListNs = this._getEventListNs(eventName); // {"namespace": [listOfCallbacks, ...], ...}
                     // loop namespaces
                     for (var namespace in eventListNs) {
+                        if (ns && ns !== namespace) {
+                            continue;
+                        }
                         if (eventListNs.hasOwnProperty(namespace)) {
-                            eventList = eventListNs[namespace]; // [listOfCallbacks]
+                            eventList = eventListNs[namespace]; // [listOfCallbacks, ...]
                             // loop callbacks
                             for (var j = 0, c1 = eventList.length, event; j < c1; j++) {
                                 event = {type: events[i], data: data};
@@ -482,12 +492,15 @@
     var Core = require('Core'),
         EventManager = require('EventManager');
 
+    var uuid = 0;
+
     /**
      * @constructor
      * @param {Object} descriptor
      */
     var Sandbox = function (descriptor) {
         this.descriptor = descriptor || {};
+        this.namespace = this.descriptor.name + ++uuid;
     };
 
     /**
@@ -534,7 +547,7 @@
     Sandbox.prototype.bind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.bind(event, callback, this.descriptor.name);
+            EventManager.bind(event, callback, this.namespace);
         }
 
         return this;
@@ -551,7 +564,7 @@
     Sandbox.prototype.unbind = function (event, callback) {
         if (this.is('listen:' + event)) {
             // Adds module name as namespace
-            EventManager.unbind(event, callback, this.descriptor.name);
+            EventManager.unbind(event, callback, this.namespace);
         }
 
         return this;
@@ -611,7 +624,7 @@
 },
 "locales": {"MessageView":{"text_label":{"ru":"Он сказал: ","en":"He said: "}},"DataGenerator":{},"Logger":{}},
 "templates": {"MessageView":"<div class=\"b-message-view\" id=\"b-message-view\">\r\n    <span class=\"b-message-view__label\">{%=label%}</span><span class=\"b-message-view__value\">{%=value%}</span>\r\n</div>"},
-"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}}},
+"descriptors": {"MessageView":{"name":"MessageView","acl":{"trigger:newData:display":true,"listen:newData":true},"resources":{}},"DataGenerator":{"name":"DataGenerator","acl":{"trigger:newData":true,"listen:destroy":true},"resources":{"interval":1000}},"Logger":{"name":"Logger","acl":{"listen:newData":true,"listen:ready":true},"resources":{}}},
 "descriptor": {
     "modules": ["MessageView", "DataGenerator", "Logger"],
     "safe_modules": ["Logger"],
@@ -628,7 +641,6 @@
 },
 "MessageView": function MessageView(sandboxed, exports, module) {
     "use strict";
-    var messageViewInstance;
 
     var MessageView = function (sandbox) {
         var self = this;
@@ -650,28 +662,23 @@
         this.sandbox.trigger('newData:display');
     };
 
-    return {
-        init: function (sandbox) {
-            messageViewInstance = new MessageView(sandbox);
-        },
-        destroy: function () {
-            messageViewInstance = null;
-        }
-    };
+    return MessageView;
 },
 "DataGenerator": function DataGenerator(sandboxed, exports, module) {
     "use strict";
     var intervalId;
-        
-    return {
-        init: function (sandbox) {
-            intervalId = setInterval(function () {
-                sandbox.trigger('newData', Math.random());
-            }, sandbox.getResource('interval'));
-        },
-        destroy: function () {
-            clearInterval(intervalId);    
+
+    return function (sandbox) {
+        if (intervalId) {
+            return; // 1 instance only
         }
+        intervalId = setInterval(function () {
+            sandbox.trigger('newData', Math.random());
+        }, sandbox.getResource('interval'));
+
+        sandbox.bind('destroy', function () {
+            clearInterval(intervalId);
+        });
     };
 },
 "Logger": function Logger(require, exports, module) {
@@ -683,12 +690,9 @@
         log(event.type, event.data);
     };
         
-    return {
-        init: function (sandbox) {
-            sandbox.bind('newData', printLog);
-            sandbox.bind('ready', printLog);
-        },
-        destroy: function () {}
+    return function (sandbox) {
+        sandbox.bind('newData', printLog);
+        sandbox.bind('ready', printLog);
     };
 }
 })(/**

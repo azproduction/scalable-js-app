@@ -1,7 +1,8 @@
 {
     "name": "DataGenerator",
     "acl": {
-        "trigger:newData": true
+        "trigger:newData": true,
+        "listen:destroy": true
     },
     "resources": {
         "interval": 1000

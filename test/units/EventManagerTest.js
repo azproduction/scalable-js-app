@@ -137,4 +137,20 @@ function EventManagerTest (require) {
 
         EventManager.unbind('event1'); // cleanup
     });
+
+    test("one namespace trigger test", function() {
+        expect(1);
+
+        EventManager.bind('event1', function () {
+            ok(true, "event should fire");
+        }, 'namespace');
+
+        EventManager.bind('event1', function () {
+            ok(false, "event shouldnt fire");
+        }, 'namespace2');
+
+        EventManager.trigger('event1', {}, false, 'namespace'); // 1
+
+        EventManager.unbind('event1'); // cleanup
+    });
 }
