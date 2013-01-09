@@ -56,9 +56,14 @@
 
 var APP_CONFIG = __dirname + '/../index.json',
     BASE_DIR = __dirname + '/../',
-    TMP_DIR = __dirname + '/tmp/';
+    TMP_DIR = __dirname + '/.lmd/';
 
 var fs = require('fs');
+
+// like "lmd init"
+if (fs.existsSync(TMP_DIR) == false) {
+    fs.mkdirSync(TMP_DIR);
+}
 
 var parameters = (function(a,b,c,d){c={};for(a=a.split(/\s*\B[\/-]+([\w-]+)[\s=]*/),d=1;b=a[d++];c[b]=a[d++]||!0);return c})
                  (process.argv.join(' '));
@@ -129,7 +134,8 @@ var lmd_config = {
     "modules": collectModules(),
     "sandbox": collectSandboxedModules(),
     "lazy": IS_PRODUCTION,
-    "pack": IS_PRODUCTION
+    "pack": IS_PRODUCTION,
+    "output": '../out/lmd.' + parameters.v + '.js'
 };
 
-fs.writeFileSync(TMP_DIR + 'lmd.' + parameters.v + '.json', JSON.stringify(lmd_config), 'utf8');
+fs.writeFileSync(TMP_DIR + parameters.v  + '.lmd' + '.json', JSON.stringify(lmd_config), 'utf8');
